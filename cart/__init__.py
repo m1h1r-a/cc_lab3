@@ -1,5 +1,4 @@
 import json
-from typing import List
 
 import products
 from products import Product
@@ -8,36 +7,31 @@ from cart import dao
 
 
 class Cart:
-    def __init__(self, id: int, username: str, contents: List[Product], cost: float):
+    def __init__(self, id: int, username: str, contents: list[Product], cost: float):
         self.id = id
         self.username = username
         self.contents = contents
         self.cost = cost
 
-    @staticmethod
-    def load(data: dict) -> "Cart":
-        return Cart(
-            id=data["id"],
-            username=data["username"],
-            contents=[Product(**item) for item in json.loads(data["contents"])],
-            cost=data["cost"],
-        )
+    def load(data):
+        return Cart(data["id"], data["username"], data["contents"], data["cost"])
 
 
-def get_cart(username: str) -> List[Product]:
+def get_cart(username: str) -> list:
+    # Fetch cart details from the DAO
     cart_details = dao.get_cart(username)
-    if not cart_details:
+    if cart_details is None:
         return []
 
-    all_products = []
-    for cart_detail in cart_details:
-        try:
-            contents = json.loads(cart_detail["contents"])
-        except json.JSONDecodeError:
-            continue  # Skip invalid JSON contents
-        all_products.extend(products.get_product(item) for item in contents)
+    # Use list comprehensions to simplify the logic
+    items = [
+        content
+        for cart_detail in cart_details
+        for content in eval(cart_detail["contents"])
+    ]
 
-    return all_products
+    # Fetch products directly using a map function and return the result
+    return list(map(products.get_product, items))
 
 
 def add_to_cart(username: str, product_id: int):
